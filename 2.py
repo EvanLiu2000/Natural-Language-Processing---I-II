@@ -59,7 +59,9 @@ if __name__ == "__main__":
             [f"{word}:{score}" for word, score in zip(feature_names, tfidf_scores)])
         print(f"{title:<40} | {score_str}")
 
-    new_text = "I like reading, and reading makes me happy.Reading broadens people's horizons"
+    #new_text = "Reading is a lifelong journey that enriches the mind and expands knowledge. Every daily reading session builds vocabulary, enhances critical thinking, and fosters empathy for different perspectives and life experiences."
+    #new_text = "Urban life offers endless opportunities for career growth and cultural experiences, though it often comes with high living costs and stress from fast-paced daily routines and crowded city environments."
+    new_text = "Artificial intelligence transforms healthcare and education by automating tasks and enabling personalized experiences, while raising ethical concerns about privacy and responsible technology use in daily life."
     new_vector = tfidf_vectorizer.transform([new_text])
     s = cosine_similarity(new_vector, tfidf_matrix)
     print(s)
