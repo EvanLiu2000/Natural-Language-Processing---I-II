@@ -59,7 +59,8 @@ if __name__ == "__main__":
             [f"{word}:{score}" for word, score in zip(feature_names, tfidf_scores)])
         print(f"{title:<40} | {score_str}")
 
-    new_text = "i love ai"
+    new_text = "I like reading, and reading makes me happy.Reading broadens people's horizons"
     new_vector = tfidf_vectorizer.transform([new_text])
     s = cosine_similarity(new_vector, tfidf_matrix)
+    print(s)
     print(doc_titles[np.argmax(s)])
