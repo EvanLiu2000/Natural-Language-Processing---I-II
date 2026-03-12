@@ -1,8 +1,9 @@
 import nltk
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import TfidfVectorizer
-import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
 from pathlib import Path
+import numpy as np
 
 nltk.download('punkt')
 
@@ -20,12 +21,14 @@ def custom_nltk_tokenizer(text):
     return filtered_tokens
 
 
+tfidf_vectorizer = TfidfVectorizer(
+    tokenizer=custom_nltk_tokenizer,
+    stop_words='english',
+    max_features=50
+)
+
+
 def compute_tfidf(corpus, document_titles):
-    tfidf_vectorizer = TfidfVectorizer(
-        tokenizer=custom_nltk_tokenizer,
-        stop_words='english',
-        max_features=50
-    )
     tfidf_matrix = tfidf_vectorizer.fit_transform(corpus)
     feature_names = tfidf_vectorizer.get_feature_names_out()
     return feature_names, tfidf_matrix, document_titles
@@ -55,3 +58,8 @@ if __name__ == "__main__":
         score_str = " | ".join(
             [f"{word}:{score}" for word, score in zip(feature_names, tfidf_scores)])
         print(f"{title:<40} | {score_str}")
+
+    new_text = "i love ai"
+    new_vector = tfidf_vectorizer.transform([new_text])
+    s = cosine_similarity(new_vector, tfidf_matrix)
+    print(doc_titles[np.argmax(s)])
