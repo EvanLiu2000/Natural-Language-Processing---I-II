@@ -17,7 +17,7 @@ Wandering through ancient streets or quiet villages, we shed our routines and be
 """
 
 
-def preprocess_text_modified(text):
+def preprocess_text(text):
     # 1. Convert to lowercase
     text = text.lower()
     # 2. Remove punctuation
@@ -38,7 +38,7 @@ def preprocess_text_modified(text):
     return sentences
 
 
-processed_sentences = preprocess_text_modified(text)
+processed_sentences = preprocess_text(text)
 print(f"Number of sentences (windows): {len(processed_sentences)}")
 print(
     f"Example window: {processed_sentences[0] if processed_sentences else 'None'}")
