@@ -1,3 +1,4 @@
+from typing import List, Dict, Set, Tuple
 import torch
 from torch.utils.data import Dataset, DataLoader
 from pathlib import Path
@@ -5,16 +6,17 @@ from pathlib import Path
 
 class NamesDataset(Dataset):
     def __init__(self, data_dir='names', max_len=20):
-        self.countries = [
+        self.countries: List[str] = [
             'Arabic', 'Chinese', 'Czech', 'Dutch', 'English',
             'French', 'German', 'Greek', 'Irish', 'Italian',
             'Japanese', 'Korean', 'Polish', 'Portuguese',
             'Russian', 'Scottish', 'Spanish', 'Vietnamese'
         ]
-        self.country_to_idx = {c: i for i, c in enumerate(self.countries)}
+        self.country_to_idx: Dict[str, int] = {
+            c: i for i, c in enumerate(self.countries)}
 
         self.max_len = max_len
-        self.samples = []
+        self.samples: List[Tuple[str, int]] = []
 
         data_path = Path(data_dir)
         for file_path in data_path.glob('*.txt'):
@@ -28,11 +30,12 @@ class NamesDataset(Dataset):
                     if name:
                         self.samples.append(
                             (name, self.country_to_idx[country]))
-        chars = set()
+        chars: Set[str] = set()
         for name, _ in self.samples:
             for c in name:
                 chars.add(c)
-        self.char_to_idx = {c: i for i, c in enumerate(sorted(chars))}
+        self.char_to_idx: Dict[str, int] = {
+            c: i for i, c in enumerate(sorted(chars))}
         self.vocab_size = len(self.char_to_idx)
 
     def __len__(self):
@@ -40,12 +43,12 @@ class NamesDataset(Dataset):
 
     def __getitem__(self, idx):
         name, country_idx = self.samples[idx]
-
-        name_tensor = torch.zeros(self.max_len, len(self.char_to_idx))
+        name_tensor: torch.Tensor = torch.zeros(
+            self.max_len, len(self.char_to_idx))
         for i, c in enumerate(name[:self.max_len]):
             name_tensor[i, self.char_to_idx[c]] = 1
 
-        country_tensor = torch.zeros(18)
+        country_tensor: torch.Tensor = torch.zeros(18)
         country_tensor[country_idx] = 1
 
         return name_tensor, country_tensor, name
