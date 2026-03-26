@@ -73,9 +73,8 @@ if __name__ == '__main__':
         name_oh = batch_names_tensor[i]
         country_oh = batch_country_tensor[i]
 
-        # Find country name from one-hot vector
         country_idx = torch.argmax(country_oh).item()
-        country_name = dataset.countries[country_idx]
+        country_name = dataset.countries[int(country_idx)]
 
         print(f"Name: {name_str}")
         print(f"Country: {country_name}")
