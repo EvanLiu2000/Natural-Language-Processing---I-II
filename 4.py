@@ -27,15 +27,22 @@ class NamesDataset(Dataset):
             with open(file_path, 'r', encoding='utf-8') as f:
                 for line in f:
                     name = line.strip()
-                    if name:
-                        self.samples.append(
-                            (name, self.country_to_idx[country]))
+                    cleaned_name = []
+                    for c in name:
+                        if c.isalpha() and c != '\xa0':
+                            cleaned_name.append(c)
+                    name = ''.join(cleaned_name).strip()
+                    if not name:
+                        continue
+                    self.samples.append(
+                        (name, self.country_to_idx[country]))
         chars: Set[str] = set()
         for name, _ in self.samples:
             for c in name:
                 chars.add(c)
         self.char_to_idx: Dict[str, int] = {
             c: i for i, c in enumerate(sorted(chars))}
+        print(self.char_to_idx)
         self.vocab_size = len(self.char_to_idx)
 
     def __len__(self):
