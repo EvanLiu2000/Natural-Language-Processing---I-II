@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MOEX Stock Agent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-body-tertiary">
+
+    <div class="container py-4 py-lg-5">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10 col-xl-9">
+                <h1 class="text-center">MOEX Stock Agent</h1>
+                <main class="card shadow-sm border-0">
+                    <div class="card-body p-4">
+
+                        <form id="ask-form" autocomplete="off">
+                            <label for="question" class="form-label text-uppercase small fw-semibold text-secondary">
+                                Your question
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <input id="question" type="text" style="font-size: 12pt;" class="form-control"
+                                    maxlength="2000" placeholder="e.g. Closing price of SBER on 2026-09-15"
+                                    aria-label="Your question">
+                                <button id="ask-btn" class="btn btn-primary px-4" type="submit">
+                                    Ask
+                                </button>
+                            </div>
+                        </form>
+
+                        <div id="examples" class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                            <span class="text-secondary small">Try:</span>
+                        </div>
+
+                        <div id="status" class="d-none align-items-center gap-2 text-secondary mt-3" aria-live="polite">
+                            <span class="spinner-border spinner-border-sm text-primary" role="status"
+                                aria-hidden="true"></span>
+                            <span>Thinking and calling tools&hellip;</span>
+                        </div>
+
+                        <div id="error" class="alert alert-danger d-none mt-3" role="alert"></div>
+
+                        <section id="result" class="d-none mt-4" aria-live="polite">
+                            <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+                                <h2 class="h5 mb-0">Answer</h2>
+                                <span id="meta" class="text-secondary small"></span>
+                            </div>
+                            <div id="answer"
+                                class="border-start border-4 border-primary bg-body-tertiary rounded-3 p-3 text-break">
+                            </div>
+
+                            <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mt-4 mb-2">
+                                <h3 class="h6 mb-0">Tool calls</h3>
+                                <span id="tool-count" class="text-secondary small"></span>
+                            </div>
+                            <div id="tools" class="accordion"></div>
+                        </section>
+                    </div>
+                </main>
+
+                <footer class="text-center text-secondary small mt-4">
+                    Data source: MOEX ISS API &middot; Model:
+                    <span id="model-name">deepseek</span>
+                </footer>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <script>
+        $(function () {
+            "use strict";
+
+            var EXAMPLES = [
+                "How much did Sberbank's share cost at the close on September 15, 2026?",
+                "Closing price of SBER and GAZP on 09/15/2026",
+                "Average SBER trading volume for September 2026",
+                "SBER price on September 13, 2026",
+                "Hi, what can you do?"
+            ];
+
+            var loading = false;
+
+            EXAMPLES.forEach(function (question) {
+                $("<button>", {
+                    type: "button",
+                    class: "btn btn-outline-secondary btn-sm rounded-pill",
+                    text: question
+                }).on("click", function () {
+                    $("#question").val(question).trigger("focus");
+                }).appendTo("#examples");
+            });
+
+            $.getJSON("/api/health").done(function (data) {
+                if (data && data.model) {
+                    $("#model-name").text(data.model);
+                }
+            });
+
+            $("#ask-form").on("submit", function (event) {
+                event.preventDefault();
+                ask();
+            });
+
+            function ask() {
+                if (loading) {
+                    return;
+                }
+                var question = $.trim($("#question").val());
+                if (!question) {
+                    showError("Please enter a question.");
+                    return;
+                }
+
+                loading = true;
+                $("#ask-btn").prop("disabled", true).text("Asking...");
+                setStatus(true);
+                $("#error").addClass("d-none").text("");
+                $("#result").addClass("d-none");
+
+                $.ajax({
+                    url: "/api/ask",
+                    method: "POST",
+                    contentType: "application/json",
+                    dataType: "json",
+                    data: JSON.stringify({ question: question }),
+                    success: function (data) {
+                        render(data);
+                    },
+                    error: function (xhr) {
+                        showError(describeError(xhr));
+                    },
+                    complete: function () {
+                        loading = false;
+                        $("#ask-btn").prop("disabled", false).text("Ask");
+                        setStatus(false);
+                    }
+                });
+            }
+
+            function render(data) {
+                var $answer = $("#answer");
+                $answer.html(renderMarkdown(data.answer || ""));
+                styleMarkdown($answer);
+
+                var meta = [];
+                if (data.model) { meta.push("model: " + data.model); }
+                if (data.steps_used) { meta.push("steps: " + data.steps_used); }
+                if (data.trace_id) { meta.push("trace: " + data.trace_id); }
+                $("#meta").text(meta.join(" | "));
+
+                var calls = data.tool_calls || [];
+                $("#tool-count").text(calls.length + (calls.length === 1 ? " call" : " calls"));
+
+                var $tools = $("#tools").empty();
+                if (!calls.length) {
+                    $("<p>", {
+                        class: "text-secondary mb-0",
+                        text: "No tools were called."
+                    }).appendTo($tools);
+                } else {
+                    calls.forEach(function (call, index) {
+                        $tools.append(buildToolItem(call, index));
+                    });
+                }
+
+                $("#result").removeClass("d-none");
+            }
+
+            function buildToolItem(call, index) {
+                var paneId = "tool-pane-" + index;
+                var $item = $("<div>", { class: "accordion-item" });
+
+                var $header = $("<h2>", { class: "accordion-header" });
+                var $button = $("<button>", {
+                    class: "accordion-button collapsed",
+                    type: "button",
+                    "data-bs-toggle": "collapse",
+                    "data-bs-target": "#" + paneId,
+                    "aria-expanded": "false",
+                    "aria-controls": paneId
+                });
+                $("<span>", {
+                    class: "badge text-bg-primary me-2",
+                    text: "Step " + call.step
+                }).appendTo($button);
+                $("<span>", {
+                    class: "fw-semibold",
+                    text: call.name || "unknown tool"
+                }).appendTo($button);
+                $header.append($button);
+
+                var $pane = $("<div>", {
+                    id: paneId,
+                    class: "accordion-collapse collapse",
+                    "data-bs-parent": "#tools"
+                });
+                var $body = $("<div>", { class: "accordion-body" });
+
+                $body.append($("<p>", {
+                    class: "text-secondary text-uppercase small fw-semibold mb-1",
+                    text: "Arguments"
+                }));
+                $body.append($("<pre>", {
+                    class: "bg-dark text-light p-3 rounded-3 small overflow-auto text-break mb-3"
+                }).text(pretty(call.arguments)));
+
+                $body.append($("<p>", {
+                    class: "text-secondary text-uppercase small fw-semibold mb-1",
+                    text: "Result"
+                }));
+                $body.append($("<pre>", {
+                    class: "bg-dark text-light p-3 rounded-3 small overflow-auto text-break mb-0"
+                }).text(pretty(call.result)));
+
+                $pane.append($body);
+                $item.append($header, $pane);
+                return $item;
+            }
+
+            function renderMarkdown(text) {
+                if (window.marked && window.DOMPurify) {
+                    var html = marked.parse(text || "", {
+                        gfm: true,
+                        breaks: true
+                    });
+                    return DOMPurify.sanitize(html);
+                }
+                var escaped = $("<div>").text(text || "").html();
+                return escaped.replace(/\n/g, "<br>");
+            }
+
+            function styleMarkdown($container) {
+                $container.find("h1").addClass("h4");
+                $container.find("h2").addClass("h5");
+                $container.find("h3, h4, h5, h6").addClass("h6");
+                $container.find("table").addClass("table table-sm table-bordered align-middle");
+                $container.find("blockquote").addClass("blockquote border-start border-4 ps-3 text-secondary");
+                $container.find("img").addClass("img-fluid");
+                $container.find("pre").addClass("bg-dark text-light p-3 rounded-3 small overflow-auto");
+                $container.find("code").addClass("font-monospace");
+                $container.find("code").filter(function () {
+                    return !$(this).closest("pre").length;
+                }).addClass("bg-body-secondary rounded px-1");
+            }
+
+            function pretty(value) {
+                try {
+                    return JSON.stringify(value, null, 2);
+                } catch (error) {
+                    return String(value);
+                }
+            }
+
+            function setStatus(visible) {
+                $("#status").toggleClass("d-none", !visible).toggleClass("d-flex", visible);
+            }
+
+            function showError(message) {
+                $("#error").text(message || "Something went wrong.").removeClass("d-none");
+                $("#result").addClass("d-none");
+            }
+
+            function describeError(xhr) {
+                var detail = xhr.responseJSON && xhr.responseJSON.detail;
+                if (typeof detail === "string") {
+                    return detail;
+                }
+                if ($.isArray(detail)) {
+                    return detail.map(function (item) {
+                        return item.msg || JSON.stringify(item);
+                    }).join("; ");
+                }
+                return "Request failed (HTTP " + xhr.status + ").";
+            }
+        });
+    </script>
+</body>
+
+</html>

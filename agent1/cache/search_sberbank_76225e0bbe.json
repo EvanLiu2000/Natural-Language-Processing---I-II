@@ -1,0 +1,54 @@
+{
+ "securities": {
+  "columns": [
+   "secid",
+   "shortname",
+   "regnumber",
+   "name",
+   "isin",
+   "is_traded",
+   "emitent_id",
+   "emitent_title",
+   "emitent_inn",
+   "emitent_okpo",
+   "type",
+   "group",
+   "primary_boardid",
+   "marketprice_boardid"
+  ],
+  "data": [
+   [
+    "SBER",
+    "Сбербанк",
+    "10301481B",
+    "Сбербанк России ПАО ао",
+    "RU0009029540",
+    1,
+    484,
+    "Публичное акционерное общество \"Сбербанк России\"",
+    "7707083893",
+    "00032537",
+    "common_share",
+    "stock_shares",
+    "TQBR",
+    "TQBR"
+   ],
+   [
+    "SBERP",
+    "Сбербанк-п",
+    "20301481B",
+    "Сбербанк России ПАО ап",
+    "RU0009029557",
+    1,
+    484,
+    "Публичное акционерное общество \"Сбербанк России\"",
+    "7707083893",
+    "00032537",
+    "preferred_share",
+    "stock_shares",
+    "TQBR",
+    "TQBR"
+   ]
+  ]
+ }
+}
