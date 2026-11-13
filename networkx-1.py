@@ -1,3 +1,5 @@
 import networkx as nx
 
-G = nx.Graph()
+G = nx.path_graph(4)
+
+print(list(G))
