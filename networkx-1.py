@@ -1,5 +1,5 @@
 import networkx as nx
 
-G = nx.path_graph(4)
-
-print(list(G))
+G = nx.cycle_graph(5)
+centrality = nx.eigenvector_centrality(G)
+print(centrality)
